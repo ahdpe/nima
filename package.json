@@ -1,0 +1,12 @@
+{
+  "name": "nima-epochs",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "NIMA: Epochs. Shared evolving ocean with emergent food webs, climate cycles and catastrophes.",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "run": "node scripts/run.mjs"
+  }
+}

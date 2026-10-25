@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>NIMA · Epochs</title>
+<meta name="description" content="One shared ocean where life evolves on its own, day and night: bodies built from genes, grazers, hunters, thorned plants, seasons and catastrophes.">
+<meta name="theme-color" content="#050f14">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="fonts.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="intro-open">
+<svg class="symbols" aria-hidden="true"><defs>
+  <symbol id="i-eye" viewBox="0 0 20 20"><path d="M1.5 10S5 4.5 10 4.5 18.5 10 18.5 10 15 15.5 10 15.5 1.5 10 1.5 10Z"/><circle cx="10" cy="10" r="2.6"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 20 20"><circle cx="10" cy="10" r="7.5"/><path d="M10 5.5V10l3 2"/><path d="M2.5 4.5 4.5 2.5M17.5 4.5l-2-2"/></symbol>
+  <symbol id="i-sound" viewBox="0 0 20 20"><path d="M3 8v4h3l4 3.5v-11L6 8H3Z"/><path d="M13 7.5a3.5 3.5 0 0 1 0 5M15.5 5a7 7 0 0 1 0 10"/></symbol>
+  <symbol id="i-inside" viewBox="0 0 20 20"><circle cx="10" cy="10" r="7.5"/><path d="M10 9v5M10 6.2v.1"/></symbol>
+  <symbol id="i-close" viewBox="0 0 20 20"><path d="m5 5 10 10M15 5 5 15"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 20 20"><path d="M3 10h13M11 5l5 5-5 5"/></symbol>
+  <symbol id="i-chevron" viewBox="0 0 20 20"><path d="m5 8 5 5 5-5"/></symbol>
+  <symbol id="i-follow" viewBox="0 0 20 20"><circle cx="10" cy="10" r="3"/><path d="M10 1.5v4M10 14.5v4M1.5 10h4M14.5 10h4"/></symbol>
+</defs></svg>
+
+<canvas id="ocean" aria-label="The living ocean. Drag to explore, scroll or pinch to zoom, tap a creature."></canvas>
+<div class="vignette" aria-hidden="true"></div>
+<div class="grain" aria-hidden="true"></div>
+
+<header class="header">
+  <a class="brand" href="./" aria-label="NIMA Epochs">
+    <svg class="brand-mark" viewBox="0 0 42 42" aria-hidden="true"><path d="M8 29c-8-12 0-27 14-22 15 5 16 25 3 29-12 4-24-8-17-17 6-8 20-3 20 6"/><circle cx="28" cy="25" r="2"/><path class="mark-strata" d="M6 36h30M10 39.5h22"/></svg>
+    <span class="brand-word">NIMA</span><span class="brand-sub" data-t="brandSub">EPOCHS</span>
+  </a>
+  <div class="header-center"><span class="tiny-dot"></span><span data-t="tagline">ONE OCEAN · LIFE WRITES ITS OWN HISTORY</span></div>
+  <div class="header-right">
+    <div class="connection"><span id="live-dot"></span><span id="live-label" data-t="connecting">CONNECTING</span></div>
+    <button id="paper" type="button" class="head-link" hidden data-t="paper">Daily</button>
+    <button id="about-open" type="button" class="head-link" aria-haspopup="dialog" data-t="about">About</button>
+    <button id="lang" type="button" class="language" aria-label="Switch language">RU <span>↗</span></button>
+  </div>
+</header>
+
+<section class="intro" id="intro" aria-labelledby="intro-title">
+  <div class="eyebrow"><span class="short-line"></span><span data-t="eyebrow">AN OCEAN THAT EVOLVES ON ITS OWN</span></div>
+  <h1 id="intro-title"><span data-t="h1a">Life is writing</span><br><em data-t="h1b">its own history.</em></h1>
+  <p class="intro-copy" data-t="introCopy">Bodies built from genes. Grazers, hunters and thorned plants. Seasons, cold spells and catastrophes. One shared ocean that keeps evolving day and night. Nothing here is scripted.</p>
+  <button id="enter" type="button" class="enter"><span data-t="enter">Enter the ocean</span><svg><use href="#i-arrow"/></svg></button>
+  <div class="intro-foot"><span class="tiny-dot"></span><span data-t="introFoot">The same world for everyone. Every visit, a new chapter.</span></div>
+</section>
+
+<button id="news" class="news" type="button" hidden><canvas class="news-portrait" width="112" height="112" aria-hidden="true"></canvas><span class="news-text"><span class="eyebrow news-eyebrow"></span><span class="news-title"></span><span class="news-sub"></span></span></button>
+<div class="world-caption" id="world-caption" aria-live="polite"><span class="caption-line"></span><span id="caption"></span></div>
+
+<aside id="card" class="selection" hidden aria-label="Selected creature">
+  <div class="selection-heading"><span id="card-dot" class="lineage-dot"></span><button id="card-names" type="button" class="selection-names"><span id="card-name" class="selection-name"></span><span id="card-common" class="selection-common"></span><span class="mini-meter"><b id="card-mini-energy"></b></span></button><button id="card-collapse" type="button" class="icon-button card-collapse" aria-label="Collapse" aria-expanded="true"><svg><use href="#i-chevron"/></svg></button><button id="card-close" type="button" class="icon-button" aria-label="Close"><svg><use href="#i-close"/></svg></button></div>
+  <p id="card-note" class="selection-note"></p>
+  <p id="card-discover" class="selection-discover" hidden></p>
+  <dl class="selection-facts">
+    <div><dt data-t="role">Way of life</dt><dd id="card-role"></dd></div>
+    <div><dt data-t="body">Body</dt><dd id="card-body"></dd></div>
+    <div><dt data-t="energy">Energy</dt><dd><span class="meter"><b id="card-energy"></b></span></dd></div>
+    <div><dt data-t="kin">Living relatives</dt><dd id="card-kin"></dd></div>
+  </dl>
+  <div class="selection-foot"><span id="card-state" class="selection-state"></span><button id="card-follow" type="button" class="follow-button"><svg><use href="#i-follow"/></svg><span id="card-follow-label">Follow</span></button></div>
+</aside>
+
+<aside id="guide" class="guide" aria-label="Inside the ocean" inert>
+  <div class="guide-heading"><div><span class="eyebrow" data-t="lookCloser">LOOK A LITTLE CLOSER</span><h2 data-t="guideTitle">Inside the ocean</h2></div><button id="guide-close" type="button" class="icon-button" aria-label="Close"><svg><use href="#i-close"/></svg></button></div>
+  <div class="tabs" role="tablist">
+    <button type="button" role="tab" class="active" aria-selected="true" data-tab="life" data-t="tabLife">Life</button>
+    <button type="button" role="tab" aria-selected="false" data-tab="chronicle" data-t="tabChronicle">Chronicle</button>
+    <button type="button" role="tab" aria-selected="false" data-tab="rules" data-t="tabRules">Rules</button>
+  </div>
+  <section class="tab-panel" data-panel="life">
+    <p class="panel-copy" data-t="lifeCopy">Every shape on the water is a creature whose body was built from its genes. Its colour is family resemblance: related species look alike.</p>
+    <div id="epoch-box" class="epoch-box" hidden><span class="eyebrow" id="epoch-eyebrow"></span><strong id="epoch-name"></strong><p id="epoch-note"></p></div>
+    <div class="guide-stat"><span data-t="animals">Animals</span><strong id="g-animals">—</strong><span class="spark-label" data-t="last12">last 12 hours</span></div>
+    <svg id="trend" class="trend" viewBox="0 0 300 70" preserveAspectRatio="none" role="img" aria-label="Grazers and predators over the last twelve hours"></svg>
+    <ul class="role-legend">
+      <li><i class="k grazer"></i><span data-t="grazers">grazers</span><b id="g-grazers">0</b></li>
+      <li><i class="k predator"></i><span data-t="predators">predators</span><b id="g-predators">0</b></li>
+      <li><i class="k scavenger"></i><span data-t="scavengers">scavengers</span><b id="g-scavengers">0</b></li>
+      <li><i class="k plant"></i><span data-t="plants">plants</span><b id="g-plants">0</b></li>
+    </ul>
+    <div class="section-label"><span data-t="climateLabel">CLIMATE · TWO WEEKS AHEAD</span><span id="climate-now"></span></div>
+    <svg id="climate-chart" class="trend climate-chart" viewBox="0 0 300 60" preserveAspectRatio="none" role="img" aria-label="Climate from two days ago to fourteen days ahead"></svg>
+    <p id="forecast" class="forecast"></p>
+    <div class="section-label"><span data-t="livingSpecies">LIVING SPECIES</span><button id="tree-open-2" type="button" class="text-button mini-link"><span id="g-species-count"></span> · <span data-t="treeShort">tree of life</span> ↗</button></div>
+    <div id="species-list" class="species-list"></div>
+  </section>
+  <section class="tab-panel" data-panel="chronicle" hidden>
+    <button id="tree-open" type="button" class="tree-teaser"><span class="eyebrow" data-t="treeEyebrow">EVERY SPECIES, LIVING AND EXTINCT</span><span data-t="treeTitle">Tree of life</span><svg><use href="#i-arrow"/></svg></button>
+    <button id="museum-open" type="button" class="tree-teaser museum-teaser"><span class="eyebrow" data-t="museumEyebrow">EVERY BODY PLAN LIFE HAS TRIED</span><span data-t="museumTitle">Museum of forms</span><svg><use href="#i-arrow"/></svg></button>
+    <button id="paper-teaser" type="button" class="paper-teaser" hidden><span class="eyebrow" data-t="paperTitle">THE OCEAN DAILY</span><span id="paper-teaser-head"></span><svg><use href="#i-arrow"/></svg></button>
+    <div class="section-label"><span data-t="stories">FROM THE CHRONICLER</span><span class="mini-label" data-t="aiNote">AI · READS, NEVER CHANGES</span></div>
+    <div id="story-list" class="story-list"></div>
+    <div class="section-label"><span data-t="events">EVENTS</span><span class="mini-label" data-t="measured">MEASURED</span></div>
+    <ol id="event-list" class="event-list"></ol>
+  </section>
+  <section class="tab-panel" data-panel="rules" hidden>
+    <div id="rules-copy" class="rules-copy"></div>
+    <button id="about-from-guide" type="button" class="text-button"><span data-t="readAll">How the world works, in full</span> <span>↗</span></button>
+    <div class="section-label"><span data-t="observerLabel">YOUR OBSERVER NAME</span></div>
+    <div class="observer"><strong id="observer-name"></strong><button id="observer-new" type="button" class="text-button" data-t="newName">Another name</button></div>
+    <p id="observer-finds" class="panel-copy"></p>
+    <div id="chronicler-status" class="science"></div>
+  </section>
+</aside>
+
+<footer class="footer">
+  <div class="world-age"><span class="eyebrow" id="age-label">OCEAN AGE</span><span id="epoch-line" class="epoch-line"></span><div><span id="age">—</span><span class="age-detail" id="age-detail"></span></div><span class="season-line" id="season"></span></div>
+  <nav class="dock" aria-label="Controls">
+    <button id="observe" type="button" class="dock-button" aria-pressed="false"><svg><use href="#i-eye"/></svg><span data-t="observe">Observe</span></button>
+    <span class="dock-divider"></span>
+    <button id="lapse" type="button" class="dock-button"><svg><use href="#i-clock"/></svg><span data-t="lapse">Day in 30 s</span></button>
+    <button id="sound" type="button" class="dock-button" aria-pressed="false"><svg><use href="#i-sound"/></svg><span data-t="listen">Listen</span></button>
+    <button id="guide-open" type="button" class="dock-button" aria-pressed="false"><svg><use href="#i-inside"/></svg><span data-t="inside">Inside</span></button>
+  </nav>
+  <div class="world-count"><div><span class="tiny-dot"></span><span id="n-animals">—</span><span data-t="animalsLower">animals</span></div><span class="count-foot" id="count-foot"></span></div>
+</footer>
+<p class="canvas-hint" data-t="hint">Drag to explore · scroll or pinch to zoom · tap a creature</p>
+
+<div id="about" class="about" role="dialog" aria-modal="true" aria-labelledby="about-title" hidden>
+  <div class="about-sheet">
+    <div class="about-top"><div><span class="eyebrow" data-t="aboutEyebrow">FOR THOSE WHO WANT TO UNDERSTAND</span><h2 id="about-title" data-t="aboutTitle">About Epochs</h2></div><button id="about-close" type="button" class="icon-button" aria-label="Close"><svg><use href="#i-close"/></svg></button></div>
+    <div id="about-body" class="about-body"></div>
+  </div>
+</div>
+
+<div id="paper-panel" class="paper" role="dialog" aria-modal="true" aria-labelledby="paper-title" hidden>
+  <div class="paper-sheet">
+    <div class="paper-top"><div><span class="eyebrow" id="paper-day"></span><h2 id="paper-title" data-t="paperName">The Ocean Daily</h2></div><button id="paper-close" type="button" class="icon-button" aria-label="Close"><svg><use href="#i-close"/></svg></button></div>
+    <nav class="paper-nav" id="paper-nav" hidden><button id="paper-prev" type="button" class="text-button">← <span data-t="paperPrev">Earlier issue</span></button><span id="paper-count" class="paper-count"></span><button id="paper-next" type="button" class="text-button"><span data-t="paperNext">Later issue</span> →</button></nav>
+    <p id="paper-head" class="paper-head"></p>
+    <ul id="paper-items" class="paper-items"></ul>
+    <div id="paper-stories" class="paper-stories"></div>
+    <p class="paper-note" data-t="paperNote"></p>
+  </div>
+</div>
+
+<section id="museum" class="tree museum" hidden aria-labelledby="museum-title">
+  <div class="tree-top"><div><span class="eyebrow" data-t="museumEyebrow">EVERY BODY PLAN LIFE HAS TRIED</span><h2 id="museum-title" data-t="museumTitle">Museum of forms</h2><p class="tree-legend" data-t="museumLegend"></p><p class="museum-stats"></p></div><button type="button" class="museum-close icon-button" aria-label="Close"><svg><use href="#i-close"/></svg></button></div>
+  <p class="tree-status museum-status"></p>
+  <div class="museum-halls"></div>
+</section>
+<section id="tree" class="tree" hidden aria-labelledby="tree-title">
+  <div class="tree-top"><div><span class="eyebrow" data-t="treeEyebrow">EVERY SPECIES, LIVING AND EXTINCT</span><h2 id="tree-title" data-t="treeTitle">Tree of life</h2><p class="tree-legend" data-t="treeLegend"></p></div><button type="button" class="tree-close icon-button" aria-label="Close"><svg><use href="#i-close"/></svg></button></div>
+  <p class="tree-status"></p>
+  <div class="tree-plot"></div>
+  <aside class="tree-detail" hidden><div class="selection-heading"><span class="lineage-dot td-dot"></span><div class="selection-names"><span class="selection-name td-name"></span><span class="selection-common td-common"></span></div><button type="button" class="icon-button td-close" aria-label="Close"><svg><use href="#i-close"/></svg></button></div><p class="selection-note td-note"></p><dl class="selection-facts td-facts"></dl></aside>
+</section>
+<section id="timelapse" class="timelapse" hidden aria-label="Time-lapse">
+  <canvas></canvas>
+  <div class="tl-top"><div><span class="eyebrow" data-t="lapseEyebrow">THE LAST DAY, FROM ABOVE</span><div class="tl-time">…</div><div class="tl-counts"></div></div><button type="button" class="tl-close icon-button" aria-label="Close"><svg><use href="#i-close"/></svg></button></div>
+  <p class="tl-status"></p>
+  <div class="tl-controls"><button type="button" class="tl-play">▶</button><div class="tl-bar"><svg class="tl-spark" viewBox="0 0 1000 40" preserveAspectRatio="none"></svg><i class="tl-head"></i></div></div>
+</section>
+
+<p class="waking" data-t="waking">The ocean is waking…</p>
+<p class="fallback" data-t="fallback">This browser cannot show WebGL2. The ocean keeps living on the server.</p>
+<script type="module" src="app.js"></script>
+</body>
+</html>

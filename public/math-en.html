@@ -1,0 +1,212 @@
+<h3>The complete mathematics</h3>
+<p class="lead">These are the rules by which the server computes the ocean, with the same constants as the code (<span class="data">lib/params.mjs</span>, <span class="data">lib/world.mjs</span>, <span class="data">lib/genome.mjs</span>). Apart from these rules and the random number generator, nothing decides what happens.</p>
+
+<h4>01. World, grid and time</h4>
+<p>The ocean is a torus: the right edge joins the left, the top joins the bottom. Fields (nutrients, detritus, algae, toxin, depth) live on a grid of 4-unit cells.</p>
+<pre class="equation">L = 1536 units,  grid 384 × 384,  cell 4 × 4
+Δt = 0.2 s  (5 steps per second, none skipped)
+moving bodies:   Δtₐ = 0.4 s, staggered by the parity of id
+sessile bodies:  Δtₛ = 1 s,   staggered by id mod 5
+fields:          Δt_f = 2 s</pre>
+<p>The step is fixed. Server time does not depend on whether anyone is watching.</p>
+
+<h4>02. Light, day, year and climate</h4>
+<pre class="equation">day:      d(x,t) = clamp(0.2 + 0.8·cos 2π(x/L − t/T_d), 0, 1),   T_d = 900 s
+belt:     b(t) = L·(0.5 + 0.16·sin 2πt/T_y),                     T_y = 86 400 s
+latitude: w(y,t) = 0.12 + 0.88·((1 + cos 2π(y − b)/L) / 2)^1.5
+year:     Y(t) = 0.85 + 0.15·cos 4πt/T_y
+climate:  C(t) = 1 + 0.17·sin(2πt/11d + φ₁) + 0.13·sin(2πt/17d + φ₂) + 0.11·sin(2πt/29d + φ₃)
+dust:     M(t) = 1, after a meteor 0.12, then a linear return over one day
+
+I(x,y,t) = d · w · C · M · Y · (0.3 + 0.7·s(x,y,t))</pre>
+<p><span class="data">s</span> is shallowness (section 03). The periods 11, 17 and 29 days are coprime, so the climate pattern repeats only after 5423 days. A cold spell starts when C &lt; 0.72 and ends when C &gt; 0.78; the browser forecasts it with the same formula.</p>
+
+<h4>03. The archipelago</h4>
+<pre class="equation">centre of island k:  cₖ(t) = cₖ + aₖ·sin(2πt/Pₖ + φₖ),   Pₖ ∈ [17, 45] days
+mask:     m(x) = maxₖ exp(−|x − cₖ(t)|² / rₖ²),   rₖ ∈ [0.052, 0.086]·L
+height:   h = 0.9·m + 0.45·(n_fine − 0.5) + 0.2·(n_coarse − 0.5)
+shallowness: s = smoothstep((h − 0.38) / 0.16)</pre>
+<p>n is periodic noise on the torus. Seven islands cover about 9% of the area. The seafloor is recomputed every ten minutes; islands drift for weeks and sometimes come close.</p>
+
+<h4>04. The cycle of matter</h4>
+<pre class="equation">M = Σ N + Σ D + Σ A + S + Σᵢ (mᵢ + eᵢ) = const
+
+diffusion:   J_pq = 0.03·Δt_f·(N_p − N_q),   N_p −= J, N_q += J
+decay:       D → N, fraction 1 − exp(−Δt_f/1800) per step
+sinking:     in deep cells (s &lt; 0.2) D → S at 1/7200 s⁻¹
+upwelling:   along the slopes of the banks (0.05 ≤ s &lt; 0.6), as at real coasts:
+             S·Δt_f/(1 day) of the sediment and N·Δt_f/(2 days) of deep water,
+             shared evenly by the slope cells, where there is light to use it</pre>
+<p>N is dissolved nutrient, D detritus, A algae, S sediment, m and e a creature's mass and energy. A creature's energy is matter too: what it spends returns to N, its body returns to D. A test checks that M changes by less than 10⁻⁹ over hours of computation.</p>
+
+<h4>05. The algal carpet</h4>
+<pre class="equation">plant shade:  σ = max(0, 1 − Φ/Φ₀),   Φ = chloroplasts in the cell, Φ₀ = 0.35
+growth: g = r·I·σ·max(A, A₀)·(1 − A/A_max)·N/(N + K_N)·Δt_f,   g ≤ N/2
+        r = 0.04 s⁻¹,  A₀ = 0.02,  A_max = 1,  K_N = 0.15
+death:  A·0.0005·Δt_f → D</pre>
+<p>A thin film A₀ is everywhere, so grazed water greens again on its own. Growth is logistic: fastest at half cover.</p>
+
+<h4>06. The body</h4>
+<p>A genome lists 1–12 modules, each a type and a size s ∈ [0.1, 1.5]. Juveniles carry every module at a scale σ ∈ (0, 1].</p>
+<pre class="equation">sums by type: Ph (chloroplast), Mo (mouth), Fl (cilia), Ar (armour),
+              E (eye), Lu (light organ), F (fat), Te (tentacle), Sp (spine) — each Σ sⱼ·σ
+
+body plan: sym = 0 is bilateral, 3…8 radial with sym rays;
+  λ ∈ [0.7, 2.4] is the length/width of a bilateral body;
+  g ∈ 1…5 is the number of segments: each carries the whole set of organs and a
+  body of 0.25, so the sums above are multiplied by g, m = 0.25g + Σ sⱼσg,
+  upkeep ×(1 − 0.07(g − 1)), λ ×(1 + 0.15(g − 1)), τ ÷(1 + 0.25(g − 1))
+a plant's growth form: rosette, filament, bush (m += 0.4·Ph of stem), kelp (m += 0.35·Ph),
+  creeping runner (m += 0.1·Ph, grazing ×0.8), floating colony (u += 0.0035·Ph), diatom (m += 0.45·Ph,
+  def += 0.35, grazing ×0.75)
+
+placement: φⱼ is a module's angle from the forward direction
+  Mo* = Σ sⱼσ·(0.25 + 0.375·(1 + cos φⱼ))   a mouth bites best at the front
+  E*  = the same for eyes                     an eye sees best at the front
+  Fl* = Σ sⱼσ·(0.25 + 0.375·(1 − cos φⱼ))   cilia push best from the rear
+  a radial body has no front: Mo* = Mo, E* = E, Fl* = 0.6·Fl (it pulses);
+  it is gelatinous: 0.0022m and the cost of motion ×0.7
+
+mass:     m = 0.25 + Σ sⱼ·σ          radius: r = 1.1·√m
+sight:    R = 10 + 45·(1 − e^(−1.6E*)), without eyes R = 5
+reserve:  cap = 3m + 8F
+defence:  def = 2·Ar + Sp + 0.25m  (plants 2·Ar + Sp + 0.05m, a filament Ar instead of 2·Ar)
+water drag: k = 1.9/(0.6 + λ) + 0.3·Te + 0.2·Sp   (radial: 1.15 + …)
+turning:  τ = 1.6/(0.3 + λ)   (radial: 2.2)
+tentacle reach: ρ = 2.2·Te
+upkeep per second:
+          u = 0.0022m + 0.003E + 0.003Mo + 0.003Fl + 0.001Lu + 0.0006F + 0.002Te + 0.0008Sp</pre>
+<p>Upkeep is paid on an organ's full size, while its work depends on where it sits: a mouth on the back costs as much as one in front but bites four times weaker. Selection itself straightens the body plan. Chloroplasts in animals lie inside the cell, so their position does not matter.</p>
+
+<h4>07. Photosynthesis of plants</h4>
+<pre class="equation">P = Ph · I · s · 0.25 · N/(N + 0.15) · Δtₛ,   P ≤ N/2
+in swimming animals also ×min(1.2, √(1/m)): a big body has less surface for its bulk
+pigment p ∈ [0, 1] (green → brown → red) at the cell's shallowness s:
+  P ×= 1 + 0.5·p·(1 − s) − 0.35·p²   (green p = 0 is neutral; the best p ≈ 0.7·(1 − s))
+leaf width ℓ ∈ [0, 1]: P ×= 1 + 0.6·(ℓ − 0.5), and grazing such a plant ×(1 + 1.2·(ℓ − 0.5))
+light in layers: kelp is shaded only by kelp, bushes by bushes and kelp, the rest by all;
+  a filament lies over 3 cells, a runner over 5; a colony sees light as at s ≥ 0.6, kelp fronds from a slope (s ≥ 0.1) as at s ≥ 0.65;
+  up to half of a runner's offshoot is built from dissolved N
+light share s: rosette min(1, Φ₀/Φ);  bush min(1, Φ₀/Φ_bushes) — it stands
+  above the rest and shades them;  a filament lies over three cells along its
+  axis, its Ph split in three, s the mean of min(1, Φ₀/Φ) over those cells
+e += P,  N −= P</pre>
+<p>Plants in a crowded cell share the light, so density is limited rather than set.</p>
+
+<h4>08. The brain</h4>
+<pre class="equation">inputs x ∈ ℝ¹⁷: direction and closeness of the nearest edible plant-like
+  and animal food, threat, relative and light flash; light; energy/cap;
+  pain; inner rhythm sin 2π·freq·age; touch; algae density; the side
+  where algae are thicker
+hidden:  h' = tanh(b_h + W_ih·x + W_hh·h),   h ∈ ℝ⁸
+outputs: y = tanh(b_o + W_ho·h' + W_io·x),   y = (thrust, turn, bite, glow)
+300 weights in all, inherited and mutating</pre>
+<p>A threat is the nearest foreign body whose mouth beats my defence and is bigger than my mouth. Direction is encoded as the angle to the target / π, closeness as 1 − distance/R.</p>
+
+<h4>09. Motion</h4>
+<pre class="equation">f = y_T if y_T &gt; 0, else 0.3·y_T   (backwards is weaker)
+θ += 2.5·τ·y_turn·Δtₐ·min(1, 3Fl)
+a = 20·f·Fl* / m
+v ← (v + a·(cos θ, sin θ)·Δtₐ)·e^(−1.5·k·Δtₐ)
+x ← x + v·Δtₐ   (modulo L)
+costs: 0.005·Fl·|f|·Δtₐ;  glowing: 0.01·Lu·y_L·Δtₐ</pre>
+
+<h4>10. Who eats whom</h4>
+<pre class="equation">o can be bitten if:  Mo* &gt; def(o)  and  m(o) &lt; 3m
+plant share of the prey:  pf = Ph(o) / Σ s(o)
+
+grazing a plant (pf ≥ 0.5): energy above 0.3·cap first, then tissue down to
+  scale 0.3;  per step take = Mo*·0.35·Δtₐ
+contact: |x − x'| &lt; r + r' + 1 + ρ   (tentacles reach farther)
+attacking an animal: take = Mo*·1.2·Δtₐ, the prey is held (v·0.5/(1 + Te));
+  when its energy runs out it dies and take += m(o)
+
+assimilation: η = pf·(0.1 + 0.4·(1 − diet)) + (1 − pf)·(0.3 + 0.6·diet)   (meat is easier to digest)
+e += η·take,   (1 − η)·take → D
+algae:    take = Mo*·0.5·Δtₐ·A/(A + 0.2), η as for plants
+detritus: take = Mo*·0.15·Δtₐ·D/(D + 0.3), η = 0.35
+the prey's spines sting the biter: it loses 0.6·take·Sp/(Sp + 0.5)
+flash: a bitten animal with light organs flashes (−0.02·Lu energy) and escapes
+  with probability min(0.5, 0.8·Lu)</pre>
+<p>The diet gene is a trade-off: a plant specialist digests meat poorly and the reverse. A species' role is measured: it is a predator when more than half of its living members' energy came from animals.</p>
+
+<h4>11. Growth, reproduction and death</h4>
+<pre class="equation">juvenile growth: σ += 0.1 every 5 s, cost 1.25·Δm,
+  if e ≥ 0.5·cap after paying
+maturity: age &gt; 60 + 300m;  adulthood is kept even after being grazed
+reproduction when e ≥ repro·cap and
+  e ≥ 1.25·m_child + min(invest·e, cap_child) + 0.35·cap
+the child starts at scale σ₀ = the birth gene;  0.25·m_child returns to N
+old age: age &gt; 1800 + 2400·√m_adult;  starvation: e ≤ 0</pre>
+
+<h4>12. Inheritance and mutation</h4>
+<pre class="equation">mate: the nearest relative within 30 units if |sig − sig'| &lt; 0.28;
+  the child takes genes and brain rows from either parent at random
+mutations at every birth:
+  module duplication 3.5%,  loss 3%,  type change 1.2%
+  size ×e^(0.15·ξ) with p=12%,  module angle +0.4·ξ with p=5%
+  λ ×e^(0.08·ξ) with p=15%;  g ±1 with p=0.8%;  a plant's growth form with p=0.6%;  p and ℓ ±0.08·ξ (25%);
+  symmetry changes with p=1%:
+    bilateral → radial with 3…8 rays, radial → ±1 ray or back
+  brain weight +0.35·ξ with p=4%,  weight reset 0.2%
+  diet ±0.05·ξ (30%),  repro, invest, birth ±0.05·ξ (20%),  freq ×e^(0.2ξ) (20%)
+  four neutral markers ±0.025·ξ always</pre>
+<p>ξ is a normal variable with unit variance (a sum of four uniforms).</p>
+
+<h4>13. Species</h4>
+<pre class="equation">signature: sig = (½Ph, ½Mo, ½Fl, ½Ar, ½E, ½Lu, ½F, diet, 0.6·markers₁…₄,
+                 ½Te, ½Sp, [0.35 + 0.02·sym if radial], 0.15·(λ − 1.3), 0.12·(g − 1),
+                 [0.3 if filament], [0.3 if bush], 0.4·p, 0.3·(ℓ − 0.5))
+  (plants have no body plan or segments, animals no growth form)
+a child stays in its parent's species if |sig − rep| &lt; 0.28,
+  otherwise it joins the nearest living species or founds a new one
+rep = mean sig of living members, recomputed every ten minutes
+established species: 15 living members</pre>
+<p>Colour on screen is a function of the neutral markers, so related species look alike.</p>
+
+<h4>14. Disease</h4>
+<pre class="equation">a new strain: on average every 8 hours, in a random individual
+infection on contact (|x−x'| &lt; r + r' + 2) if |sig − sig_strain| &lt; 0.22,
+  with probability 0.35·Δt
+harm: 0.01·m per second for 240 s, then immunity to that strain</pre>
+<p>The more identical bodies nearby, the faster an epidemic: disease strikes the most numerous species by itself.</p>
+
+<h4>15. Catastrophes and epochs</h4>
+<pre class="equation">volcano: on average every 15 days; toxin T = 1 within radius 30, harm
+  0.06·T·m per s, half-life 2 h; 40% of sediment S is released nearby
+meteor: on average every 60 days, four times likelier after 7 days without a
+  new established species; death within radius 60; dust M = 0.12 for 1–2 days
+new epoch: hourly mean biomass &lt; 0.4 × the highest hourly mean of the
+  previous day (the first two days of the world are not counted)</pre>
+
+<h4>15b. Weather</h4>
+<pre class="equation">on average: a storm every 3 days; a red tide, a warm current, a bloom every 4 days;
+  one event at a time; its strength k builds and fades over 30 minutes
+storm (2–4 h):  I ×(1 − 0.35k);  upwelling ×(1 + 3k);  swimmers drift: v += 1.2k/√m·Δtₐ;
+  kelp and bushes pay upkeep ×(1 + 2k)
+red tide (4–6 h): off a slope, radius 60–110: T = 0.55 in the patch, then decays like any toxin
+warm current (16–24 h): a band ~80 wide crosses the ocean; light in it ×(1 + 0.35k)
+bloom (an hour of welling): 3% of the sediment per hour rises into N in a disc of radius 70–120</pre>
+
+<h4>15c. Immigrants</h4>
+<pre class="equation">once a day the AI demiurge describes 1–2 species in the world's vocabulary: organs (type, size
+  0.1–1.5, place: front / rear / side / around; sizes sum ≤ 7), body plan, growth form, pigment,
+  leaf, diet, way of life, look, 12–40 individuals, region (shallows / slopes / deep)
+genome by rule: an organ's angle from its place; reflexes from a template for the way of life
+  (as for the first grazer) plus noise; neutral markers random; the group varies by mutation ×0.3
+matter: m + 0.5·cap of each individual is taken from the sediment S (fewer if S runs low)</pre>
+
+<h4>16. Spores</h4>
+<p>An established species that goes extinct leaves a spore: a copy of its genome in a bank of up to 300. Spores germinate: three after a meteor or a volcano; forty (per unit of world area) if there have been no moving animals for an hour; one hundred and sixty if the world is nearly empty. Their matter comes from dissolved N.</p>
+
+<h4>17. Determinism and storage</h4>
+<pre class="equation">randomness: one xorshift32 generator for the whole world
+snapshot: every 300 s, gzip + SHA-256, previous copy kept,
+  daily archive (last 30)
+after downtime up to 3600 s are computed, the rest is an honest pause
+events and fossils are numbered: replay after a crash never duplicates them</pre>
+<p>The same snapshot and the same code give the same history bit for bit; a test checks it.</p>
+
+<h4>18. Picture and sound</h4>
+<p>Positions, organs, sizes, energy, light, algae, depth, detritus and toxin on screen are data. Decoration: glints, light shafts, marine snow, cellular texture, bloom, shadows and the vignette. An animal's body is drawn from its genome by a rule of development: bilateral symmetry, with an organ off the axis grown as a pair of half the area (physics depends only on cos φ, so the mirror does not change it); elongation grows with Fl*/m and falls with F/m; an Fl module is a band of cilia on the cell wall, armour is plates of the shell. A plant does not move and the position of its organs has no effect in the world, so it is drawn as a radial rosette: 5–8 leaves (a species trait from the neutral colour genes), a second whorl when Ph &gt; 0.9, armour as a ring of needles, fat as droplets at the heart, leaf colour following stored energy. A species' surface pattern and colouring (one of spots, stripes, bands, rings, net, speckle, rim, sheen; density, contrast, hue, lightness — five numbers) is chosen by the AI artist when the species is named; a descendant gets a variation of its ancestor's look. This is decoration: it changes neither the body nor the physics. Sound is synthesised in the browser: every species in view owns a bell loop with its own period (6.7–15.7 s, incommensurate, so the melody never repeats); notes come from the current chord, register from body size, timbre from colour; beneath them a warm pad and the sound of water; light opens the filter, nearby predators and meteor dust turn the harmony minor, feeding herds raise bubbles.</p>
+<p class="note">Where a formula here differs from the code, the code is right. Changing any constant is a new version of the physics and is recorded in the chronicle.</p>
